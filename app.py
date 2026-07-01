@@ -478,7 +478,7 @@ def drug_vnos(person_id):
         <h1>Drug vnos za {{ person.ime }}</h1>
         <form method="post">
             <label>Dejavnost</label>
-            <input name="dejavnost" placeholder="Npr. čiščenje, pomoč, ..." required>
+            <input name="dejavnost" placeholder="dejavnost" required>
 
             <label>Denar</label>
             <input type="number" name="denar" min="0" step="0.01" required>
@@ -540,7 +540,7 @@ def fure(person_id):
         <h2>Kanjon: {{ fure_data['kanjon']|int }}</h2>
         <hr>
         <h2>Celoten denar: {{ eur(bruto) }}</h2>
-        <p>To je vsota zaslužka brez odštevanja izplačil.</p>
+
     </div>
     """
     return page("Fure", body, person=person, fure_data=fure_data, bruto=bruto)
