@@ -56,6 +56,31 @@ def to_int(value, default=0):
         return default
 
 
+def uredi_datum(value):
+    """Sprejme datum v obliki d/m, dd/mm, d.m ali dd.mm in ga shrani kot dd/mm."""
+    if value is None:
+        return ""
+
+    value = str(value).strip().replace(" ", "")
+    value = value.replace(".", "/").replace("-", "/")
+
+    if "/" not in value and value.isdigit() and len(value) == 4:
+        value = value[:2] + "/" + value[2:]
+
+    deli = value.split("/")
+
+    if len(deli) != 2:
+        return ""
+
+    dan = to_int(deli[0], -1)
+    mesec = to_int(deli[1], -1)
+
+    if 1 <= dan <= 31 and 1 <= mesec <= 12:
+        return f"{dan:02d}/{mesec:02d}"
+
+    return ""
+
+
 def eur(value):
     value = to_float(value)
     if value.is_integer():
@@ -335,7 +360,7 @@ def vnos_podatkov(person_id):
         <h1>Vnesi podatke za {{ person.ime }}</h1>
         <form method="post" action="{{ url_for('izberi_dejavnost', person_id=person.id) }}">
             <label>Datum</label>
-            <input type="date" name="datum" required>
+            <input type="text" name="datum" placeholder="dd/mm" pattern="[0-9]{1,2}/[0-9]{1,2}" maxlength="5" inputmode="numeric" required>
 
             <h2>Izberi dejavnost</h2>
             <button type="submit" name="dejavnost" value="raft">Raft</button>
@@ -352,11 +377,11 @@ def vnos_podatkov(person_id):
 @app.route("/oseba/<int:person_id>/vnos/izberi", methods=["POST"])
 def izberi_dejavnost(person_id):
     person = get_person_or_redirect(person_id)
-    datum = request.form.get("datum", "").strip()
+    datum = uredi_datum(request.form.get("datum", ""))
     dejavnost = request.form.get("dejavnost", "").strip()
 
     if not datum or dejavnost not in DEJAVNOSTI:
-        flash("Manjka datum ali dejavnost.")
+        flash("Manjka datum ali dejavnost. Datum vpiši kot dd/mm.")
         return redirect(url_for("vnos_podatkov", person_id=person.id))
 
     body = """
@@ -400,7 +425,7 @@ def izberi_dejavnost(person_id):
 @app.route("/oseba/<int:person_id>/vnos/shrani", methods=["POST"])
 def shrani_podatke(person_id):
     person = get_person_or_redirect(person_id)
-    datum = request.form.get("datum", "").strip()
+    datum = uredi_datum(request.form.get("datum", ""))
     dejavnost = request.form.get("dejavnost", "").strip()
     fure = to_int(request.form.get("fure"), 0)
 
@@ -478,7 +503,7 @@ def drug_vnos(person_id):
         <h1>Drug vnos za {{ person.ime }}</h1>
         <form method="post">
             <label>Dejavnost</label>
-            <input name="dejavnost" placeholder="dejavnost" required>
+            <input name="dejavnost" placeholder="Npr. čiščenje, pomoč, ..." required>
 
             <label>Denar</label>
             <input type="number" name="denar" min="0" step="0.01" required>
@@ -495,11 +520,11 @@ def izplacaj(person_id):
     person = get_person_or_redirect(person_id)
 
     if request.method == "POST":
-        datum = request.form.get("datum", "").strip()
+        datum = uredi_datum(request.form.get("datum", ""))
         vsota = to_float(request.form.get("vsota"), -1)
 
         if not datum or vsota < 0:
-            flash("Vnesi pravilen datum in vsoto.")
+            flash("Vnesi pravilen datum v obliki dd/mm in vsoto.")
             return redirect(url_for("izplacaj", person_id=person.id))
 
         shrani_vnos(person.id, datum=datum, izplacilo=vsota)
@@ -512,7 +537,7 @@ def izplacaj(person_id):
         <h1>Izplačaj {{ person.ime }}</h1>
         <form method="post">
             <label>Datum izplačila</label>
-            <input type="date" name="datum" required>
+            <input type="text" name="datum" placeholder="dd/mm" pattern="[0-9]{1,2}/[0-9]{1,2}" maxlength="5" inputmode="numeric" required>
 
             <label>Vsota izplačila</label>
             <input type="number" name="vsota" min="0" step="0.01" required>
@@ -540,7 +565,7 @@ def fure(person_id):
         <h2>Kanjon: {{ fure_data['kanjon']|int }}</h2>
         <hr>
         <h2>Celoten denar: {{ eur(bruto) }}</h2>
-
+        <p>To je vsota zaslužka brez odštevanja izplačil.</p>
     </div>
     """
     return page("Fure", body, person=person, fure_data=fure_data, bruto=bruto)
